@@ -17,7 +17,7 @@
  * @license     New BSD License
  */
 
-namespace Yate;
+namespace Yate\Core;
 
 /**
  * Class providing core Yate functionality, such as connecting to the server
@@ -66,58 +66,7 @@ class Core
         $this->_port = $port;
     }
 
-    /**
-     * Decodes a Yate message representation, according to the
-     * Yate documetation at {@link http://yate.null.ro/docs/extmodule.html}
-     *
-     * @param string $message The encoded message
-     * @return string The decoded message
-     */
-    protected function _decode($message)
-    {
-        $new_message = '';
-        $decode_flag = false;
-        
-        $characters = str_split($message);
-        foreach ($characters as $c) {
-            if ('%' == $c) {
-                $decode_flag = true;
-                continue;
-            }
-            if (true == $decode_flag) {
-                $new_message .= chr(ord($c)-64);
-                $decode_flag = false;
-            } else {
-                $new_message .= $c;
-            }
-        }
-        
-        return $new_message;
-    }
-
-    /**
-     * Encodes a Yate message representation,  according tot the
-     * Yate documentations at {@link http://yate.null.ro/docs/extmodule.html}
-     *
-     * @param string $message The raw message
-     * @return string The encoded message
-     */
-    protected function _encode($message)
-    {
-        $new_message = '';
-
-        $characters = str_split($message);
-        foreach ($characters as $c) {
-            if (32 > ord($c) || ':' == $c) {
-                $new_message .= chr(ord($c) + 64);
-            } else {
-                $new_message .= $c;
-            }
-        }
-
-        return $new_message;
-    }
-
+    
     /**
      * Disconnect and destroy this object
      */
@@ -129,7 +78,7 @@ class Core
     /**
      * Connect to the Yate server
      * 
-     * @return \Yate\Core
+     * @return Core
      */
     public function connect()
     {
@@ -165,7 +114,7 @@ class Core
     /**
      * Disconnect from the server
      *
-     * @return \Yate\Core
+     * @return Core
      */
     public function disconnect()
     {
@@ -178,7 +127,7 @@ class Core
     /**
      * Reset the connection
      *
-     * @return \Yate\Core
+     * @return Core
      */
     public function resetConnection()
     {
@@ -194,7 +143,7 @@ class Core
      *
      * @param string $address The IP address or hostname of the Yate server
      * @param integer $port The port on which the Yate server listens.
-     * @return \Yate\Core
+     * @return Core
      */
     public function setServer($address, $port)
     {
@@ -204,46 +153,44 @@ class Core
     }
 
     /**
-     * Encode command and send it.
+     * Receive a message from Yate.
      *
-     * The $request parameter is used to determine whether this message is
-     * a request or a response. Use true when it is a request, or false
-     * when it is a response.
-     *
-     * The command is an array with key/value pairs, which will be send to
-     * the server.
-     *
-     * If the key is numeric, it is assumed not to be relevant, so only the
-     * value will be sent. If the key is not numeric, it will be send als a
-     * key=value pair.
-     *
-     * @param boolean $request True when a request, false when a response
-     * @param array $command The command, in pieces.
-     *
-     * @return \Yate\Core
+     * @return Message|null A Message when available, else null
+     * @throws \Yate\Core\Exception
      */
-    public function sendCommand($request = true, array $command)
+    public function receiveMessage()
     {
-        $message = '';
-        if ($request) {
-            $message = '%%>';
-        } else {
-            $message = '%%<';
+        $data = socket_read($this->_connection, "\n");
+        if (false === $data) {
+            $error = socket_strerror(socket_last_error($this->_connection));
+            throw new Exception("Error reading from Yate: ". $error);
         }
 
-        foreach($command as $key => $param) {
-            $message .= ':';
-            if (is_numeric($key)){
-                $message .= $this->_encode($param);
-            } else {
-                $message .= $this->_encode("$key=$param");
-            }
+        if ('' == $data) {
+            return null;
         }
 
-        $message .= "\n";
-        if (false === socket_write($this->_connection, $message)) {
+        return Message::createFromString($data);
+    }
+
+    /**
+     * Sends the given message to Yate
+     * 
+     * @param Message $message
+     * @return Core
+     * @throws \Yate\Core\Exception
+     */
+    public function sendMessage(Message $message)
+    {
+        // Send message
+        $to_send = $message->__toString();
+        $written = socket_write($this->_connection, $to_send);
+        
+        // Check for succesful delivery
+        if (false === $written || strlen($to_send) != $written) {
             // @TODO: Another solutions may be better.
-            throw new Exception("Error writing to socket!");
+            $error = socket_strerror(socket_last_error($this->_connection));
+            throw new Exception("Error writing to Yate: ". $error);
         }
         
         return $this;
