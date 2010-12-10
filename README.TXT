@@ -1,7 +1,7 @@
 YatePHP is a PHP library to work with Yate (http://yate.null.ro/)
 
 == Requirements ==
-YatePHP can only be used with PHP 5.3 or higher, since it uses PHP 5.3-specific
+YatePHP can only be used with PHP 5.3 or higher, since it uses PHP 5.3 specific
 elements. Furthermore, it might be smart to have an installation of Yate around.
 
 == License ==
