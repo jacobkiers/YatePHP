@@ -155,7 +155,7 @@ class Core
     /**
      * Receive a message from Yate.
      *
-     * @return Message|null A Message when available, else null
+     * @return AbstractMessage|null A Message when available, else null
      * @throws \Yate\Core\Exception
      */
     public function receiveMessage()
@@ -170,17 +170,17 @@ class Core
             return null;
         }
 
-        return Message::createFromString($data);
+        return AbstractMessage::createFromString($data);
     }
 
     /**
      * Sends the given message to Yate
      * 
-     * @param Message $message
+     * @param AbstractMessage $message
      * @return Core
      * @throws \Yate\Core\Exception
      */
-    public function sendMessage(Message $message)
+    public function sendMessage(AbstractMessage $message)
     {
         // Send message
         $to_send = $message->__toString();

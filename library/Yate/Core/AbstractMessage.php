@@ -31,7 +31,7 @@ namespace Yate\Core;
  *
  * @since       0.1
  */
-class Message
+abstract class AbstractMessage
 {
     /**
      * The Yate command
@@ -41,7 +41,7 @@ class Message
     protected $_command = '';
 
     /**
-     * Flag to determine the direction of this Message
+     * Flag to determine the direction of this AbstractMessage
      *
      * If true,  this message is directed for Yate.
      * If false, this message is received from Yate.
@@ -126,7 +126,7 @@ class Message
      *
      * @param string $key   The name of the parameter
      * @param string $value The value of the parameter
-     * @return Message
+     * @return AbstractMessage
      */
     public function addParameter($key, $value)
     {
@@ -135,12 +135,12 @@ class Message
     }
 
     /**
-     * Creates a \Yate\Core\Message object from a string.
+     * Creates a \Yate\Core\AbstractMessage object from a string.
      *
      * The given message should be a valid Yate message, as sent by Yate.
      *
      * @param string $string The encoded message from Yate
-     * @return Message
+     * @return AbstractMessage
      */
     public static function createFromString($string)
     {
@@ -264,7 +264,7 @@ class Message
      * Set the command
      *
      * @param string $command
-     * @return Message
+     * @return AbstractMessage
      */
     public function setCommand($command)
     {
@@ -279,7 +279,7 @@ class Message
      * If set to false, this message is reveived from Yate.
      *
      * @param boolean $forYate
-     * @return Message
+     * @return AbstractMessage
      */
     public function setDirection($forYate = true)
     {
@@ -294,7 +294,7 @@ class Message
      * If set to false, this message is a response
      *
      * @param boolean $value
-     * @return Message
+     * @return AbstractMessage
      */
     public function setRequest($value = true)
     {
