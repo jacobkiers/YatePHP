@@ -16,9 +16,10 @@
  *
  * @category    Yate
  * @package     Yate_Core
+ * @subpackage  Message
  */
 
-namespace Yate\Core;
+namespace Yate\Core\Message;
 
 /**
  * Represents a Yate message
