@@ -11,13 +11,16 @@
  * obtain it through the world-wide-web, please send an email
  * to develop@jacobkiers.net so we can send you a copy immediately.
  *
- * @category    Yate
- * @package     Yate_Core
  * @copyright   Copyright (c) 2010 Jacob Kiers
  * @license     New BSD License
+ *
+ * @category    Yate
+ * @package     Yate_Core
+ * @subpackage  Connection
  */
 
-namespace Yate\Core;
+namespace Yate\Core\Connection;
+use Yate\Core;
 
 /**
  * Class providing core Yate functionality, such as connecting to the server
@@ -31,7 +34,7 @@ namespace Yate\Core;
  *
  * @since       0.1
  */
-class Core
+class SocketConnection implements ConnectionInterface
 {
     /**
      * IP address of hostname of Yate server
@@ -78,7 +81,7 @@ class Core
     /**
      * Connect to the Yate server
      * 
-     * @return Core
+     * @return SocketConnection
      */
     public function connect()
     {
@@ -114,7 +117,7 @@ class Core
     /**
      * Disconnect from the server
      *
-     * @return Core
+     * @return SocketConnection
      */
     public function disconnect()
     {
@@ -127,9 +130,9 @@ class Core
     /**
      * Reset the connection
      *
-     * @return Core
+     * @return SocketConnection
      */
-    public function resetConnection()
+    public function reconnect()
     {
         $this->disconnect();
         $this->connect();
@@ -143,7 +146,7 @@ class Core
      *
      * @param string $address The IP address or hostname of the Yate server
      * @param integer $port The port on which the Yate server listens.
-     * @return Core
+     * @return SocketConnection
      */
     public function setServer($address, $port)
     {
@@ -177,7 +180,7 @@ class Core
      * Sends the given message to Yate
      * 
      * @param AbstractMessage $message
-     * @return Core
+     * @return SocketConnection
      * @throws \Yate\Core\Exception
      */
     public function sendMessage(AbstractMessage $message)
