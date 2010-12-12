@@ -40,7 +40,7 @@ abstract class AbstractMessage
      * @var string
      */
     protected $_command = '';
-
+    
     /**
      * Flag to determine the direction of this AbstractMessage
      *
@@ -50,14 +50,7 @@ abstract class AbstractMessage
      * @var boolean
      */
     protected $_forYate = true;
-
-    /**
-     * Parameters of this message
-     *
-     * @var array
-     */
-    protected $_parameters = array();
-
+    
     /**
      * Whether this is a request or a response
      *
@@ -68,122 +61,37 @@ abstract class AbstractMessage
     protected $_request = true;
 
     /**
-     * Magic method to get a parameter from this message
-     * 
-     * @param string $name
-     * @return mixed
-     */
-    public function __get($name)
-    {
-        if (isset($this->_parameters[$name])) {
-            return $this->_parameters[$name];
-        }
-    }
-
-    /**
-     * Magic method to add a parameter to this message
-     *
-     * @param string $name  The name of the parameter
-     * @param string $value The value of the parameter
-     * @return void
-     */
-    public function __set($name, $value)
-    {
-        $this->_parameters[$name] = $value;
-    }
-
-    /**
      * Creates a valid Yate string representation from this message
      * 
      * @return string
      */
-    public function __toString()
-    {
-        $message = '';
-        if ($this->_request) {
-            $message .= '%%>';
-        } else {
-            $message .= '%%<';
-        }
-
-        $message = $this->_command;
-
-        foreach ($this->_parameters as $key => $value) {
-            $message .= ':';
-            if (is_numeric($key)) {
-                $message .= self::encode($value);
-            } else {
-                $message .= self::encode("$key=$value");
-            }
-        }
-
-        $message .= "\n";
-
-        return $message;
-    }
+    abstract public function __toString();
 
     /**
-     * Add a parameter to this message
-     *
-     * @param string $key   The name of the parameter
-     * @param string $value The value of the parameter
-     * @return AbstractMessage
-     */
-    public function addParameter($key, $value)
-    {
-        $this->_parameters[$key] = $value;
-        return $this;
-    }
-
-    /**
-     * Creates a \Yate\Core\AbstractMessage object from a string.
+     * Creates a Message object from a string.
      *
      * The given message should be a valid Yate message, as sent by Yate.
      *
      * @param string $string The encoded message from Yate
-     * @return AbstractMessage
+     * @return AbstractMessage|null A message when parseable or else null
      */
-    public static function createFromString($string)
-    {
-        $direction = '';
-        $message = new self();
-        
-        // We assume this message is received from Yate.
-        $message->setDirection(false);
-
-        $string = trim($string);
-
-        // Strip and store the direction (request or response) from the message.
-        $direction = substr($string, 3, 1);
-        $string = substr($string, 4);
-
-        // Check whether this is a request or a response
-        if ('<' == $direction) {
-            $message->setRequest(false);
+    public static function factory($string) {
+        /* @var $new_message AbstractMessage */
+        $new_message = null;
+        $msg_parts = explode(':', $string);
+        $type = array_shift($msg_parts);
+        switch ($type) {
+            case '%%>message':
+            case '%%<message':
+                $new_message = Message::createFromString($string);
+                break;
+            case 'install':
+                break;
+            default:
+                break;
         }
 
-        $string = explode(':', $string);
-
-        // Set the command. It is the first part of the original message.
-        $message->setCommand(array_shift($string));
-
-        // Parse the parameters, and add them to the message
-        foreach ($string as $key => $param) {
-            $param = self::decode($param);
-            $value = '';
-
-            // If the parameter contains a '=' symbol, it is a key/value pair.
-            if (strpos($param, '=')) {
-                list($key, $value) = explode('=', $param);
-            } else {
-                $value = $param;
-            }
-
-            $message->addParameter(self::decode($key), $value);
-        }
-
-        // Create the message and return
-        return $message;
+        return $new_message;
     }
 
     /**
