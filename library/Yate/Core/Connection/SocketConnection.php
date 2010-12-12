@@ -163,7 +163,11 @@ class SocketConnection implements ConnectionInterface
      */
     public function receiveMessage()
     {
+        // Since all messages are separated by a newline (ASCII code 10),
+        // read all data until we stumble upon that. We only read one message
+        // at a time.
         $data = socket_read($this->_connection, "\n");
+        
         if (false === $data) {
             $error = socket_strerror(socket_last_error($this->_connection));
             throw new Exception("Error reading from Yate: ". $error);
@@ -172,8 +176,9 @@ class SocketConnection implements ConnectionInterface
         if ('' == $data) {
             return null;
         }
-
-        return AbstractMessage::createFromString($data);
+        
+        // Return a message from the factory
+        return AbstractMessage::factory($data);
     }
 
     /**
@@ -187,15 +192,29 @@ class SocketConnection implements ConnectionInterface
     {
         // Send message
         $to_send = $message->__toString();
-        $written = socket_write($this->_connection, $to_send);
-        
-        // Check for succesful delivery
-        if (false === $written || strlen($to_send) != $written) {
-            // @TODO: Another solutions may be better.
-            $error = socket_strerror(socket_last_error($this->_connection));
-            throw new Exception("Error writing to Yate: ". $error);
+
+        // In a while loop, because not all bytes may be written at once.
+        // See documentation: http://php.net/socket_write
+        $total_length = strlen($to_send);
+        $offset = 0;
+        while ($offset < $total_length) {
+            $msg = substr($to_send, $offset);
+            $bytes_to_write = $total_length - $offset;
+            $sent = socket_write($this->_connection, $msg, $bytes_to_write);
+            if ($sent === false) {
+                // Error occurred, break the while loop 
+                break;
+            }
+            $offset += $sent;
         }
-        
+
+        // Check for succesful delivery
+        if ($offset < $total_length) {
+            // @TODO: Another solution may be better.
+            $error = socket_strerror(socket_last_error($this->_connection));
+            throw new Exception("Error writing to Yate: " . $error);
+        }
+
         return $this;
     }
 }
