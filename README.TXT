@@ -18,4 +18,5 @@ http://framework.zend.com/manual/en/coding-standard.html
 
 I won't require a transfer of copyright (also known as a Contributer License
 Agreement), but please make sure you have the permission to contribute. I will
-only include patches which are also subject to the New BSD license.
+only include patches which subject to the same license as this project (the
+New BSD license).
