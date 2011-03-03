@@ -22,10 +22,11 @@
 namespace Yate\Core\Message;
 
 /**
- * Represents a Yate message
+ * Represents a Yate message of type 'Message'
  *
  * @category    Yate
  * @package     Yate_Core
+ * @subpackage  Message
  *
  * @copyright   Copyright (c) 2010 Jacob Kiers
  * @license     New BSD License
@@ -41,6 +42,13 @@ class Message extends AbstractMessage
      * @var integer
      */
     protected $_created;
+    
+    /**
+     * The Yate command
+     *
+     * @var string
+     */
+    protected $_command = '';
     
     /**
      * A unique message ID
@@ -103,7 +111,7 @@ class Message extends AbstractMessage
     public function __toString()
     {
         $message = '';
-        if ($this->_request) {
+        if ($this->getDirection() == self::MSG_IN) {
             $message .= '%%>message:';
         } else {
             $message .= '%%<message:';
@@ -146,16 +154,19 @@ class Message extends AbstractMessage
      * @return Message
      * @throws Exception Throws an exception when the string is not a message
      */
-    public static function createFromString($message)
+    public static function factory($message)
     {
-        /* @var $new_message AbstractMessage */
+        /* @var $new_message Message */
         $new_message = null;
         $msg_parts = explode(':', $message);
-        $type = array_shift($msg_parts);
+        $type = $msg_parts[0];
 
         if ('message' != substr($type, 4)) {
             throw new Exception("Message is not of type 'message'!");
         }
+
+        $new_message = new Message();
+        $new_message->setId(self::decode($msg_parts[1]));
 
         $direction = null;
         if ('%%>' == substr($type, 0, 3)) {
@@ -163,29 +174,27 @@ class Message extends AbstractMessage
         } else {
             $direction = 'out';
         }
-
-        $new_message = new Message();
-        $new_message->setId(self::decode(array_shift($msg_parts)));
-
-        if ('in' == $direction) {
+        
+        if (self::MSG_IN == $direction) {
             $new_message->setDirection(false);
-            $new_message->setTime(array_shift($msg_parts));
+            $new_message->setTime($msg_parts[2]);
         } else {
             $new_message->setDirection(true);
-            if ('true' == array_shift($msg_parts)) {
+            if ('true' == $msg_parts[2]) {
                 $new_message->setProcessed(true);
             } else {
                 $new_message->setProcessed(false);
             }
         }
 
-        $new_message->setCommand(self::decode(array_shift($msg_parts)));
-        $new_message->setReturnValue(self::decode(array_shift($msg_parts)));
-        foreach ($msg_parts as $part) {
-            $key = $value = '';
-            list($key, $value) = explode('=', $part);
-            $key = self::decode($key);
-            $value = self::decode($value);
+        $new_message->setCommand(self::decode($msg_parts[3]));
+        $new_message->setReturnValue(self::decode($msg_parts[4]));
+        
+        $numparts = count($msg_parts);
+        for ($i = 5; $i < $numparts; $i++) {
+            $part = explode('=', $msg_parts[$i]);
+            $key = self::decode($part[0]);
+            $value = self::decode($part[1]);
 
             $new_message->addParameter($key, $value);
         }
@@ -193,6 +202,11 @@ class Message extends AbstractMessage
         return $new_message;
     }
 
+    /**
+     * Return the unique id of this Message (if set)
+     *
+     * @return string|null String if the id is set, null otherwise
+     */
     public function getId()
     {
         return $this->_id;
@@ -211,6 +225,18 @@ class Message extends AbstractMessage
     public function isProcessed()
     {
         return $this->_processed;
+    }
+
+    /**
+     * Set the command
+     *
+     * @param string $command
+     * @return AbstractMessage
+     */
+    public function setCommand($command)
+    {
+        $this->_command = $command;
+        return $this;
     }
 
     public function setId($id)

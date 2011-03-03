@@ -26,6 +26,7 @@ namespace Yate\Core\Message;
  *
  * @category    Yate
  * @package     Yate_Core
+ * @subpackage  Message
  *
  * @copyright   Copyright (c) 2010 Jacob Kiers
  * @license     New BSD License
@@ -35,21 +36,25 @@ namespace Yate\Core\Message;
 abstract class AbstractMessage
 {
     /**
-     * The Yate command
-     *
+     * This message is incoming (from Yate)
      * @var string
      */
-    protected $_command = '';
+    const MSG_IN = 'in';
     
     /**
-     * Flag to determine the direction of this AbstractMessage
+     * This message is outgoing (to Yate)
+     * @var string
+     */
+    const MSG_OUT = 'out';
+    
+    /**
+     * Flag to determine the direction of this Message
      *
-     * If true,  this message is directed for Yate.
-     * If false, this message is received from Yate.
+     * The value should be one of AbstractMessage::MSG_IN or AbstractMessage::MSG_OUT
      *
      * @var boolean
      */
-    protected $_forYate = true;
+    protected $_direction;
     
     /**
      * Whether this is a request or a response
@@ -66,6 +71,28 @@ abstract class AbstractMessage
      * @return string
      */
     abstract public function __toString();
+    
+    /**
+     * Determines the direction of the message
+     * 
+     * @param string $type
+     * 
+     * @return string
+     */
+    protected function _getDirection($type)
+    {
+        $direction = substr($type, 0, 3);
+        $msg_type = substr($type, 4);
+        
+        if ($msg_type != 'message')
+        {
+            if ('%%>' == $direction) {
+                return self::MSG_OUT;
+            } else {
+                return self::MSG_IN;
+            }
+        }
+    }
 
     /**
      * Creates a Message object from a string.
@@ -73,19 +100,39 @@ abstract class AbstractMessage
      * The given message should be a valid Yate message, as sent by Yate.
      *
      * @param string $string The encoded message from Yate
+     * 
      * @return AbstractMessage|null A message when parseable or else null
      */
-    public static function factory($string) {
+    public static function factory($string)
+    {
         /* @var $new_message AbstractMessage */
         $new_message = null;
-        $msg_parts = explode(':', $string);
-        $type = array_shift($msg_parts);
+        $type = substr($string, 0, strpos($string, ':'));
+        
         switch ($type) {
             case '%%>message':
             case '%%<message':
-                $new_message = Message::createFromString($string);
+                $new_message = Message::factory($string);
                 break;
-            case 'install':
+            case '%%>install':
+            case '%%<install':
+                $new_message = InstallAbstract::factory($string);
+                break;
+            case '%%>uninstall':
+            case '%%<install':
+                break;
+            case '%%>watch':
+            case '%%<watch':
+                break;
+            case '%%>unwatch':
+            case '%%<unwatch':
+                break;
+            case '%%>setlocal':
+            case '%%<setlocal':
+                break;
+            case '%%>output':
+                break;
+            case '%%>connect':
                 break;
             default:
                 break;
@@ -145,18 +192,25 @@ abstract class AbstractMessage
 
         return $new_message;
     }
+    
+    /**
+     * Returns the direction of the message.
+     * 
+     * @return string
+     */
+    public function getDirection()
+    {
+        return $this->_direction;
+    }
 
     /**
      * Whether this message is for Yate, or is received from Yate
      *
-     * If true,  this message is to be send to Yate.
-     * If false, this message is received from Yate.
-     *
-     * @return boolean True when for Yate, false when received
+     * @return boolean True when for Yate, false when received from Yate
      */
     public function isForYate()
     {
-        return $this->_forYate;
+        return ($this->_direction == self::MSG_OUT);
     }
 
     /**
@@ -170,29 +224,19 @@ abstract class AbstractMessage
     }
 
     /**
-     * Set the command
-     *
-     * @param string $command
-     * @return AbstractMessage
-     */
-    public function setCommand($command)
-    {
-        $this->_command = $command;
-        return $this;
-    }
-
-    /**
      * Set the direction of this message.
      *
-     * If set to true,  this message is to be sent to Yate.
-     * If set to false, this message is reveived from Yate.
-     *
-     * @param boolean $forYate
+     * @param string $direction The direction
+     * 
      * @return AbstractMessage
+     * @throws Exception Throws an exception when we encounter an unknown direction.
      */
-    public function setDirection($forYate = true)
+    public function setDirection($direction)
     {
-        $this->_forYate = (boolean) $forYate;
+        if ($direction != self::MSG_IN || $direction  != self::MSG_OUT) {
+            throw new Exception('Please use either MSG_IN or MSG_OUT.');
+        }
+        $this->_direction = $direction;
         return $this;
     }
 
@@ -207,7 +251,7 @@ abstract class AbstractMessage
      */
     public function setRequest($value = true)
     {
-        $this->_request = (boolean) $value;
+        $this->_request = (boolean)$value;
         return $this;
     }
 }
